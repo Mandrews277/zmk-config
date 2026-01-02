@@ -64,11 +64,6 @@
         reg = <0>;
         spi-max-frequency = <2000000>;
         irq-gpios = <&gpio0 24 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
-        
-        /* Axis configuration */
-        swap-xy;           // Swap X and Y axes
-        // invert-x;       // Invert X direction (uncomment if needed)
-        // invert-y;       // Invert Y direction (uncomment if needed)
 
         /*   optional features   */
         // snipe-layers = <1>;
