@@ -7,5 +7,5 @@
 #include "comet.dtsi"
 
 &default_transform {
-    col-offset = <5>;
+    col-offset = <0>;
 };
