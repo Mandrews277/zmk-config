@@ -1,0 +1,29 @@
+# Copyright (c) 2026 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+if SHIELD_COMET_LEFT
+
+config ZMK_KEYBOARD_NAME
+    default "Comet"
+
+config ZMK_SPLIT_ROLE_CENTRAL
+    default n
+
+endif
+
+if SHIELD_COMET_RIGHT
+
+config ZMK_KEYBOARD_NAME
+    default "Comet"
+
+config ZMK_SPLIT_ROLE_CENTRAL
+    default y
+
+endif
+
+if SHIELD_COMET_LEFT || SHIELD_COMET_RIGHT
+
+config ZMK_SPLIT
+    default y
+
+endif
