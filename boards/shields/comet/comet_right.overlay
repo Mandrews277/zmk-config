@@ -6,6 +6,13 @@
 
 #include "comet.dtsi"
 
+/ {
+  trackball_listener {
+    compatible = "zmk,input-listener";
+    device = <&trackball>;
+  };
+};
+
 &default_transform {
     col-offset = <6>;
 };
@@ -75,11 +82,4 @@
         //     // tap-ms = <5>;
         // };
     };
-};
-
-/ {
-  trackball_listener {
-    compatible = "zmk,input-listener";
-    device = <&trackball>;
-  };
 };
