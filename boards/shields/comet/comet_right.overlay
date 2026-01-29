@@ -66,6 +66,9 @@
         irq-gpios = <&gpio0 24 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
         cpi = <1200>;
         evt-type = <0x02>;
+        swap-xy;
+        invert-x;
+        invert-y;
         x-input-code = <0x00>;
         y-input-code = <0x01>;
 
