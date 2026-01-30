@@ -8,7 +8,8 @@
 
 / {
     trackball: trackball {
-        status = "disabled";
+        status = "okay";
+        compatible = "zmk,virtual-input";
     };
 };
 
