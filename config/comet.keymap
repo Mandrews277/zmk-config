@@ -33,20 +33,6 @@
             #binding-cells = <2>;
             tapping-term-ms = <500>;
         };
-
-        /* 
-         * Include the DPI cycle behavior in the main keymap so it is available
-         * to be referenced by key bindings.
-         */
-         dpi_cycle: sensor_dpi_cycle {
-            compatible = "zmk,behavior-sensor-attr-cycle";
-            #binding-cells = <1>;
-            values = <100 300 600 900 1200>;
-            attr = <0>;
-            sensor_device = <&trackball>;
-            display-name = "DPI cycle";
-            persistant;
-        };
     };
 
     combos {
