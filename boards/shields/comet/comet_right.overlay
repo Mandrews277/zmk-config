@@ -23,7 +23,8 @@
         dpi_cycle: sensor_dpi_cycle {
             compatible = "zmk,behavior-sensor-attr-cycle";
             #binding-cells = <1>;
-            values = <100 300 600 900 1200>;
+            /* PMW3610 supports multiples of 200 CPI. Valid range: 200-3200. */
+            values = <400 800 1200 1600 2400>;
             attr = <0>;
             sensor_device = <&trackball>;
             display-name = "DPI cycle";
