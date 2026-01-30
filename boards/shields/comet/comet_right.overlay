@@ -5,11 +5,18 @@
  */
 
 #include "comet.dtsi"
+#include <input/processors.dtsi>
 
 / {
   trackball_listener {
     compatible = "zmk,input-listener";
     device = <&trackball>;
+    input-processors = <&zip_temp_layer 4 1000>;
+
+    scroll {
+        layers = <2>;
+        input-processors = <&zip_xy_to_scroll_mapper>;
+    };
   };
 };
 
@@ -74,11 +81,6 @@
 
         force-awake;
         force-awake-4ms-mode;
-
-        /*   optional features   */
-        // snipe-layers = <1>;
-        scroll-layers = <2>;
-        automouse-layer = <4>;
 
         /*   optional: ball action on specific layers  */
         // arrows {
