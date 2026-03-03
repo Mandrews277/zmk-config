@@ -14,7 +14,12 @@
 
     scroll {
         layers = <2>;
-        input-processors = <&zip_xy_to_scroll_mapper>;
+        /*
+         * Chain: map XY motion to scroll, then scale.
+         * zip_scroll_scaler multiplier divisor - e.g. 1 2 = half speed,
+         * 2 1 = double speed. Max 16 for each to avoid overflow.
+         */
+        input-processors = <&zip_xy_to_scroll_mapper &zip_scroll_scaler 1 2>;
     };
   };
 
@@ -91,8 +96,14 @@
         x-input-code = <0x00>;
         y-input-code = <0x01>;
 
-        force-awake;
-        force-awake-4ms-mode;
+        /*
+         * DO NOT use force-awake: it keeps the sensor always active, causing
+         * spurious motion reports from noise/vibration when idle. This leads
+         * to the cursor randomly snapping to corners. Let the sensor sleep
+         * when idle instead.
+         */
+        /* force-awake; */
+        /* force-awake-4ms-mode; */
 
         /*   optional: ball action on specific layers  */
         // arrows {
