@@ -7,21 +7,11 @@
 #include "comet.dtsi"
 
 / {
-    trackball: trackball {
-        status = "disabled";
-        compatible = "pixart,pmw3610-alt";
-    };
-
-    behaviors {
-        dpi_cycle: sensor_dpi_cycle {
-            compatible = "zmk,behavior-sensor-attr-cycle";
-            #binding-cells = <1>;
-            values = <400 800 1200>;
-            attr = <0>;
-            sensor_device = <&trackball>;
-            status = "disabled";
-        };
-    };
+    /*
+     * No trackball or dpi_cycle on left half - trackball is on the right.
+     * Defining them here (even disabled) causes linker errors when the
+     * sensor device isn't built.
+     */
 };
 
 &default_transform {
