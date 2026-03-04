@@ -19,7 +19,7 @@
          * zip_scroll_scaler multiplier divisor - e.g. 1 2 = half speed,
          * 2 1 = double speed. Max 16 for each to avoid overflow.
          */
-        input-processors = <&zip_xy_to_scroll_mapper &zip_scroll_scaler 1 2>;
+        input-processors = <&zip_xy_to_scroll_mapper &zip_scroll_scaler 1 8>;
     };
   };
 
