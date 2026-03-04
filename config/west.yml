@@ -20,6 +20,9 @@ manifest:
     - name: zmk-behavior-sensor-attr-cycle
       remote: george-norton
       revision: main
+    - name: zmk-input-processor-report-rate-limit
+      remote: badjeff
+      revision: main
 
   self:
     path: config

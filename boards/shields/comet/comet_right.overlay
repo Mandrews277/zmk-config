@@ -6,6 +6,8 @@
 
 #include "comet.dtsi"
 #include <input/processors.dtsi>
+#include <input/processors/report_rate_limit.dtsi>
+#include <dt-bindings/zmk/input_transform.h>
 
 / {
   trackball_listener {
@@ -15,11 +17,11 @@
     scroll {
         layers = <2>;
         /*
-         * Chain: map XY motion to scroll, then scale.
-         * zip_scroll_scaler multiplier divisor - e.g. 1 2 = half speed,
-         * 2 1 = double speed. Max 16 for each to avoid overflow.
+         * Chain: batch XY together, map to scroll, invert Y, then scale.
+         * zip_report_rate_limit batches X and Y so both axes are sent in the
+         * same report, enabling simultaneous horizontal and vertical scroll.
          */
-        input-processors = <&zip_xy_to_scroll_mapper &zip_scroll_scaler 1 16>;
+        input-processors = <&zip_report_rate_limit 8 &zip_xy_to_scroll_mapper &zip_scroll_transform INPUT_TRANSFORM_Y_INVERT &zip_scroll_scaler 1 16>;
     };
   };
 
