@@ -42,6 +42,17 @@
             bindings = <&to 4>;
             key-positions = <48 49>;
         };
+
+        /*
+         * Output toggle combo: press the 3 left outer-column keys simultaneously
+         * (MINUS + ESC + home-row outer) to swap between USB and Bluetooth.
+         * Assign this to a key anytime by using &out OUT_TOG in any layer.
+         */
+        Swap_Output {
+            bindings = <&out OUT_TOG>;
+            key-positions = <0 12 24>;
+            timeout-ms = <50>;
+        };
     };
 
     keymap {
