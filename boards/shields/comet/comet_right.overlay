@@ -30,19 +30,6 @@
         input-processors = <&zip_xy_to_scroll_mapper &zip_scroll_transform INPUT_TRANSFORM_Y_INVERT &zip_scroll_scaler 1 16>;
     };
   };
-
-  behaviors {
-        dpi_cycle: sensor_dpi_cycle {
-            compatible = "zmk,behavior-sensor-attr-cycle";
-            #binding-cells = <1>;
-            /* PMW3610 supports multiples of 200 CPI. Valid range: 200-3200. */
-            values = <400 800 1200 1600 2400>;
-            attr = <0>;
-            sensor_device = <&trackball>;
-            display-name = "DPI cycle";
-            persistant;
-        };
-    };
 };
 
 &default_transform {
@@ -96,7 +83,7 @@
         reg = <0>;
         spi-max-frequency = <10000000>;
         irq-gpios = <&gpio0 24 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
-        cpi = <600>;
+        cpi = <400>;
         evt-type = <0x02>;
         swap-xy;
         invert-x;
@@ -127,19 +114,5 @@
         //     // wait-ms = <5>;
         //     // tap-ms = <5>;
         // };
-    };
-};
-
-/ {
-    behaviors {
-        dpi_cycle: sensor_dpi_cycle {
-            compatible = "zmk,behavior-sensor-attr-cycle";
-            #binding-cells = <1>;
-            values = < 100 300 600 900 1200 >;
-            attr = <0>;
-            sensor_device = <&trackball>;
-            display-name = "DPI cycle";
-            persistant;
-        };
     };
 };
