@@ -56,7 +56,7 @@ namespace KeymapOverlay
         public string LayoutSource = "https://raw.githubusercontent.com/Mandrews277/zmk-config/main/config/comet.json";
         public bool AlwaysShow = false;
         public double PopupSeconds = 0;
-        public bool ShowBaseInPopup = false;
+        public double LingerSeconds = 0.5;
         public double Opacity = 0.85;
         public int KeySize = 36;
         public int SplitGap = 160;
@@ -89,7 +89,8 @@ namespace KeymapOverlay
                         case "layout": s.LayoutSource = v; break;
                         case "mode": s.AlwaysShow = v.ToLowerInvariant() == "always"; break;
                         case "popupseconds": s.PopupSeconds = D(v); break;
-                        case "showbaseinpopup": s.ShowBaseInPopup = B(v); break;
+                        case "lingerseconds": s.LingerSeconds = Math.Max(0, D(v)); break;
+                        case "showbaseinpopup": if (B(v)) s.LingerSeconds = 1.5; break; // old name
                         case "opacity": s.Opacity = Math.Max(0.15, Math.Min(1.0, D(v))); break;
                         case "keysize": s.KeySize = Math.Max(16, int.Parse(v)); break;
                         case "splitgap": s.SplitGap = int.Parse(v); break;
@@ -112,7 +113,7 @@ namespace KeymapOverlay
         public void Save()
         {
             var sb = new StringBuilder();
-            sb.AppendLine("; Keymap Overlay settings. Edit, then use tray menu > Reload.");
+            sb.AppendLine("; Keymap Overlay settings. Easier: click the tray icon to open the Settings window.");
             sb.AppendLine("; keymap / layout: a URL or a file path (relative paths are next to the .exe).");
             sb.AppendLine("; URLs are cached in .\\cache so it still works offline.");
             sb.AppendLine("keymap=" + KeymapSource);
@@ -123,8 +124,8 @@ namespace KeymapOverlay
             sb.AppendLine("mode=" + (AlwaysShow ? "always" : "popup"));
             sb.AppendLine("; popup mode: also hide after this many seconds (0 = stay while the layer is active)");
             sb.AppendLine("popupSeconds=" + PopupSeconds.ToString(CultureInfo.InvariantCulture));
-            sb.AppendLine("; popup mode: briefly show the base layer too when returning to it");
-            sb.AppendLine("showBaseInPopup=" + Bs(ShowBaseInPopup));
+            sb.AppendLine("; popup mode: keep showing for this many seconds after you return to the base layer");
+            sb.AppendLine("lingerSeconds=" + LingerSeconds.ToString(CultureInfo.InvariantCulture));
             sb.AppendLine();
             sb.AppendLine("opacity=" + Opacity.ToString(CultureInfo.InvariantCulture));
             sb.AppendLine("; key size in pixels at 100% scaling");
@@ -143,6 +144,8 @@ namespace KeymapOverlay
             try { File.WriteAllText(FilePath, sb.ToString()); }
             catch { /* read-only folder: run with defaults */ }
         }
+
+        public Settings Clone() { return (Settings)MemberwiseClone(); }
 
         public static Point? ParsePos(string s)
         {
@@ -166,19 +169,21 @@ namespace KeymapOverlay
         KeyboardHook hook;
         System.Windows.Forms.Timer hideTimer = new System.Windows.Forms.Timer();
         ToolStripMenuItem alwaysItem, unlockItem, previewMenu;
+        SettingsForm settingsForm;
         int currentLayer = 0;
         bool shown;
         bool unlocked;
+        bool previewing;   // settings window open: keep the overlay visible
 
         public OverlayApp()
         {
             settings = Settings.Load();
 
-            tray = new NotifyIcon { Icon = MakeIcon(), Text = "Keymap Overlay", Visible = true };
+            tray = new NotifyIcon { Icon = MakeIcon(), Text = "Keymap Overlay (click for settings)", Visible = true };
             tray.ContextMenuStrip = BuildMenu();
-            tray.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) ToggleAlways(); };
+            tray.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) OpenSettings(); };
 
-            hideTimer.Tick += (s, e) => { hideTimer.Stop(); if (!settings.AlwaysShow && !unlocked) SetShown(false); };
+            hideTimer.Tick += (s, e) => { hideTimer.Stop(); if (!settings.AlwaysShow && !unlocked && !previewing) SetShown(false); };
 
             left = new HalfWindow(true);
             right = new HalfWindow(false);
@@ -187,13 +192,22 @@ namespace KeymapOverlay
 
             if (!LoadKeymap(true))
             {
-                tray.ShowBalloonTip(5000, "Keymap Overlay", "Could not load the keymap - check keymap-overlay.ini", ToolTipIcon.Warning);
+                tray.ShowBalloonTip(5000, "Keymap Overlay", "Could not load the keymap - click the tray icon to check settings.", ToolTipIcon.Warning);
             }
 
             hook = new KeyboardHook(FirstVk(), OnLayerKey, settings.SwallowLayerKeys);
 
+            // Docking/undocking the laptop: pull windows back onto a visible screen.
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
+
             if (settings.AlwaysShow) SetShown(true);
-            else tray.ShowBalloonTip(3000, "Keymap Overlay", "Running. Change layers on your keyboard to see your keymap. Right-click the tray icon for options.", ToolTipIcon.Info);
+            else tray.ShowBalloonTip(3000, "Keymap Overlay", "Running. Change layers on your keyboard to see your keymap. Click the tray icon for settings.", ToolTipIcon.Info);
+        }
+
+        void OnDisplayChanged(object sender, EventArgs e)
+        {
+            // Raised on another thread.
+            if (left.IsHandleCreated) left.BeginInvoke((Action)PlaceWindows);
         }
 
         int FirstVk()
@@ -207,25 +221,19 @@ namespace KeymapOverlay
         ContextMenuStrip BuildMenu()
         {
             var m = new ContextMenuStrip();
+            var settingsItem = new ToolStripMenuItem("Settings...", null, (s, e) => OpenSettings());
+            settingsItem.Font = new Font(settingsItem.Font, FontStyle.Bold);
             alwaysItem = new ToolStripMenuItem("Always show", null, (s, e) => ToggleAlways());
             alwaysItem.Checked = settings.AlwaysShow;
             previewMenu = new ToolStripMenuItem("Show layer");
-            unlockItem = new ToolStripMenuItem("Unlock to move windows", null, (s, e) => ToggleUnlock());
+            unlockItem = new ToolStripMenuItem("Move windows", null, (s, e) => SetUnlocked(!unlocked));
+            m.Items.Add(settingsItem);
+            m.Items.Add(new ToolStripSeparator());
             m.Items.Add(alwaysItem);
             m.Items.Add(previewMenu);
-            m.Items.Add(new ToolStripSeparator());
             m.Items.Add(unlockItem);
-            m.Items.Add(new ToolStripMenuItem("Reset window positions", null, (s, e) =>
-            {
-                settings.LeftPos = settings.RightPos = ""; settings.Save(); PlaceWindows();
-            }));
             m.Items.Add(new ToolStripSeparator());
-            m.Items.Add(new ToolStripMenuItem("Reload settings + keymap", null, (s, e) => Reload()));
-            m.Items.Add(new ToolStripMenuItem("Edit settings...", null, (s, e) =>
-            {
-                try { Process.Start("notepad.exe", "\"" + Settings.FilePath + "\""); } catch { }
-            }));
-            m.Items.Add(new ToolStripSeparator());
+            m.Items.Add(new ToolStripMenuItem("Reload keymap", null, (s, e) => ReloadKeymap()));
             m.Items.Add(new ToolStripMenuItem("Exit", null, (s, e) => ExitThread()));
             return m;
         }
@@ -244,17 +252,83 @@ namespace KeymapOverlay
             }
         }
 
-        void Reload()
+        // ---- used by the settings window
+
+        public Settings CurrentSettings { get { return settings; } }
+        public bool Unlocked { get { return unlocked; } }
+
+        void OpenSettings()
         {
-            settings = Settings.Load();
+            if (settingsForm != null && !settingsForm.IsDisposed)
+            {
+                settingsForm.Activate();
+                return;
+            }
+            settingsForm = new SettingsForm(this);
+            settingsForm.FormClosed += (s, e) =>
+            {
+                settingsForm = null;
+                if (unlocked) SetUnlocked(false);
+                previewing = false;
+                ShowLayer(currentLayer, false);
+            };
+            previewing = true;
+            hideTimer.Stop();
+            SetShown(true);
+            settingsForm.Show();
+            settingsForm.Activate();
+        }
+
+        // Applies settings live. Window positions always come from the current
+        // settings (they're changed by dragging, not by the form).
+        public void ApplySettings(Settings s)
+        {
+            bool sizeChanged = s.KeySize != settings.KeySize;
+            bool sourceChanged = s.KeymapSource != settings.KeymapSource || s.LayoutSource != settings.LayoutSource;
+            s.LeftPos = settings.LeftPos;
+            s.RightPos = settings.RightPos;
+            settings = s;
+            settings.Save();
             hook.FirstVk = FirstVk();
             hook.Swallow = settings.SwallowLayerKeys;
             alwaysItem.Checked = settings.AlwaysShow;
-            if (LoadKeymap(true))
-                tray.ShowBalloonTip(2000, "Keymap Overlay", "Reloaded " + keymap.Layers.Count + " layers.", ToolTipIcon.Info);
-            if (settings.AlwaysShow) SetShown(true);
-            else if (currentLayer == 0) SetShown(false);
+            if (sourceChanged) LoadKeymap(true);
+            else if (sizeChanged && keymap != null)
+            {
+                left.Setup(keymap, layout, settings);
+                right.Setup(keymap, layout, settings);
+                PlaceWindows();
+            }
+            ShowLayer(currentLayer, false);
         }
+
+        public bool ReloadKeymap()
+        {
+            bool ok = LoadKeymap(true);
+            if (ok) tray.ShowBalloonTip(2000, "Keymap Overlay", "Loaded " + keymap.Layers.Count + " layers.", ToolTipIcon.Info);
+            return ok;
+        }
+
+        public void ResetPositions()
+        {
+            settings.LeftPos = settings.RightPos = "";
+            settings.Save();
+            PlaceWindows();
+        }
+
+        public void SetUnlocked(bool on)
+        {
+            if (on == unlocked) return;
+            unlocked = on;
+            unlockItem.Checked = unlocked;
+            left.SetClickThrough(!unlocked);
+            right.SetClickThrough(!unlocked);
+            if (unlocked) { hideTimer.Stop(); SetShown(true); }
+            else { SavePositions(); ShowLayer(currentLayer, false); }
+            if (settingsForm != null) settingsForm.SyncMoveButton();
+        }
+
+        // ----
 
         bool LoadKeymap(bool allowNetwork)
         {
@@ -277,7 +351,7 @@ namespace KeymapOverlay
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Could not load keymap/layout:\n\n" + ex.Message + "\n\nSettings file:\n" + Settings.FilePath,
+                MessageBox.Show("Could not load keymap/layout:\n\n" + ex.Message + "\n\nKeymap: " + settings.KeymapSource + "\nLayout: " + settings.LayoutSource,
                     "Keymap Overlay", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
@@ -325,11 +399,24 @@ namespace KeymapOverlay
             var wa = Screen.PrimaryScreen.WorkingArea;
             int gap = Scale(settings.SplitGap);
             int bottom = wa.Bottom - Scale(settings.BottomMargin);
-            var lp = Settings.ParsePos(settings.LeftPos);
-            var rp = Settings.ParsePos(settings.RightPos);
+            var lp = OnScreen(Settings.ParsePos(settings.LeftPos), left.Size);
+            var rp = OnScreen(Settings.ParsePos(settings.RightPos), right.Size);
             int cx = wa.Left + wa.Width / 2;
             left.Location = lp ?? new Point(cx - gap / 2 - left.Width, bottom - left.Height);
             right.Location = rp ?? new Point(cx + gap / 2, bottom - right.Height);
+        }
+
+        // A saved position is only used if most of the window is on a connected screen.
+        static Point? OnScreen(Point? p, Size size)
+        {
+            if (!p.HasValue) return null;
+            var r = new Rectangle(p.Value, size);
+            foreach (var sc in Screen.AllScreens)
+            {
+                var i = Rectangle.Intersect(sc.WorkingArea, r);
+                if (i.Width >= size.Width / 2 && i.Height >= size.Height / 2) return p;
+            }
+            return null;
         }
 
         static int Scale(int px) { return (int)Math.Round(px * HalfWindow.DpiScale); }
@@ -350,12 +437,20 @@ namespace KeymapOverlay
 
         void ShowLayer(int layer, bool preview)
         {
+            int previous = currentLayer;
             currentLayer = layer;
-            left.SetLayer(layer);
-            right.SetLayer(layer);
             hideTimer.Stop();
 
-            if (settings.AlwaysShow || unlocked) { SetShown(true); return; }
+            // Popup mode, back on base: keep showing the layer you just left for a moment.
+            bool linger = layer == 0 && !preview && shown && previous != 0 && settings.LingerSeconds > 0 &&
+                          !(settings.AlwaysShow || unlocked || previewing);
+            if (!linger)
+            {
+                left.SetLayer(layer);
+                right.SetLayer(layer);
+            }
+
+            if (settings.AlwaysShow || unlocked || previewing) { SetShown(true); return; }
 
             if (preview)
             {
@@ -367,9 +462,9 @@ namespace KeymapOverlay
                 SetShown(true);
                 if (settings.PopupSeconds > 0) StartHide(settings.PopupSeconds);
             }
-            else if (settings.ShowBaseInPopup && shown)
+            else if (linger)
             {
-                StartHide(1.5);
+                StartHide(settings.LingerSeconds);
             }
             else
             {
@@ -392,26 +487,16 @@ namespace KeymapOverlay
 
         void ToggleAlways()
         {
-            settings.AlwaysShow = !settings.AlwaysShow;
-            alwaysItem.Checked = settings.AlwaysShow;
-            settings.Save();
-            if (settings.AlwaysShow) SetShown(true);
-            else ShowLayer(currentLayer, false);
-        }
-
-        void ToggleUnlock()
-        {
-            unlocked = !unlocked;
-            unlockItem.Checked = unlocked;
-            unlockItem.Text = unlocked ? "Lock windows (drag them first)" : "Unlock to move windows";
-            left.SetClickThrough(!unlocked);
-            right.SetClickThrough(!unlocked);
-            if (unlocked) SetShown(true);
-            else { SavePositions(); ShowLayer(currentLayer, false); }
+            var s = settings.Clone();
+            s.AlwaysShow = !s.AlwaysShow;
+            ApplySettings(s);
+            if (settingsForm != null) settingsForm.LoadValues();
         }
 
         protected override void ExitThreadCore()
         {
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
+            if (settingsForm != null) settingsForm.Close();
             hook.Dispose();
             tray.Visible = false;
             tray.Dispose();
@@ -666,6 +751,14 @@ namespace KeymapOverlay
                                           (float)(k.W * unit) - 2 * gap, (float)(k.H * unit) - 2 * gap);
                 DrawKey(g, rect, radius, label, dim);
                 g.Restore(state);
+            }
+
+            if (!clickThrough)
+            {
+                float w = (float)(2 * DpiScale);
+                using (var pen = new Pen(Accent, w) { DashStyle = DashStyle.Dash })
+                using (var path = Rounded(new RectangleF(w / 2, w / 2, ClientSize.Width - w, ClientSize.Height - w), (float)(12 * DpiScale)))
+                    g.DrawPath(pen, path);
             }
         }
 

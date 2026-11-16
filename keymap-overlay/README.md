@@ -32,21 +32,31 @@ keymap changes. A cached copy is kept in `cache\` for offline use.
 
 ## Using it
 
-- **Popup mode** (default): the overlay fades in when you leave the base
-  layer and fades out when you come back.
-- **Always show**: left-click the tray icon (or tray menu → *Always show*).
-- Tray menu → **Show layer** lets you preview any layer without the keyboard.
-- Tray menu → **Unlock to move windows**: drag each half where you want it,
-  then lock again. Positions are saved.
-- Highlighted keys switch layers. Dimmed keys are `&trans` and show what falls
-  through from the base layer. Small text under a label is the hold action.
+**Click the tray icon** to open **Settings**. Changes apply immediately, and
+the overlay stays visible while the window is open so you can see them.
 
-## Settings
+- **When to show**:
+  - *Pop up* (default) shows the overlay when you leave the base layer.
+  - *Always show* keeps it on screen all the time.
+  - *Hide after N seconds* auto-hides a popup. 0 means it stays until you're
+    back on the base layer.
+  - *Keep showing for N seconds after returning to base* keeps the overlay up
+    briefly after you let go of a layer key.
+- **Appearance**: opacity and key size.
+- **Position**: click *Move windows*, drag each half anywhere (even onto
+  different monitors), then click *Done moving*. If a monitor is disconnected,
+  a half that was on it moves back to the main screen.
+- **Keymap**: where the keymap and layout come from (URL or file).
+  *Reload keymap* fetches them again after you push changes.
+- **Start with Windows**: uses a per-user registry entry, so no admin is needed.
 
-`keymap-overlay.ini` is created next to the exe on first run (tray →
-*Edit settings...*, then *Reload*). Options include `mode`, `popupSeconds`
-(auto-hide timer), `opacity`, `keySize`, the keymap/layout source (URL or
-local file), and `firstKey` (must match `CONFIG_ZMK_LAYER_KEYS_BASE_USAGE`).
+Right-click the tray icon for quick actions: *Always show*, *Show layer*
+(preview any layer), *Move windows*, *Reload keymap*, *Exit*.
+
+Highlighted keys switch layers. Dimmed keys are `&trans` and show what falls
+through from the base layer. Small text under a label is the hold action.
+
+Everything is stored in `keymap-overlay.ini` next to the exe.
 
 ## Notes
 
