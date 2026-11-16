@@ -1,0 +1,15 @@
+config ZMK_LAYER_KEYS
+    bool "Tap F13+<layer index> whenever the highest active layer changes"
+    depends on !ZMK_SPLIT || ZMK_SPLIT_ROLE_CENTRAL
+    default n
+    help
+      Sends an otherwise-unused key (F13 for layer 0, F14 for layer 1, ...)
+      every time the highest active layer changes, so a host app can show
+      the current layer. Works over USB and Bluetooth. Max 12 layers (F24).
+
+config ZMK_LAYER_KEYS_BASE_USAGE
+    hex "HID keyboard usage sent for layer 0"
+    depends on ZMK_LAYER_KEYS
+    default 0x68
+    help
+      0x68 = F13. Layer N sends this value + N.

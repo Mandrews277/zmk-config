@@ -1,0 +1,21 @@
+name: Build keymap overlay (Windows)
+
+on:
+  push:
+    paths:
+      - "keymap-overlay/**"
+      - ".github/workflows/keymap-overlay.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build with the .NET Framework csc.exe (same as build.bat)
+        shell: cmd
+        run: keymap-overlay\build.bat
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KeymapOverlay
+          path: keymap-overlay/KeymapOverlay.exe

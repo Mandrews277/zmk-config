@@ -1,0 +1,6 @@
+*.exe
+*.pdb
+keymap-overlay.ini
+cache/
+test/bin/
+test/obj/
